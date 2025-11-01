@@ -1,0 +1,45 @@
+# Claude development notes and working files
+.claude_notes/
+
+# R package development
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# Package build artifacts
+*.tar.gz
+PackRat.Rcheck/
+PackRat*.tar.gz
+
+# Test outputs
+tests/slurm/test_results/
+tests/integration/output/
+
+# renv
+renv/
+.Rprofile
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*~
+*.swp
+*.bak
+
+# IDE
+.vscode/
+.idea/
+
+# Large test data (keep only small test data in inst/testdata)
+tests/integration/data/*.csv
+
+# Local environment files
+.Renviron.local
+.Renviron.test
+
+# Documentation builds (local)
+docs/
+_site/

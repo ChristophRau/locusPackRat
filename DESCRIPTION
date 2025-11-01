@@ -1,0 +1,39 @@
+Package: genePackRat
+Type: Package
+Title: Gene Packet-based Rating for Prioritizing Candidate Genes from GWAS Loci
+Version: 0.1.0
+Authors@R: c(
+    person("Brian", "Gural", email = "bgural@unc.edu", role = c("aut", "cre")),
+    person("Todd", "Kimball", role = "aut"),
+    person("Anh", "Luu", role = "aut"),
+    person("Christoph D.", "Rau", role = "aut"))
+Description: genePackRat (Gene Packet-based Rating) provides a modular framework for
+    prioritizing candidate genes from broad GWAS/QTL intervals. It creates
+    standardized "gene packets" that consolidate gene annotations, public
+    database information, and study-specific data into multi-sheet Excel
+    workbooks for team-based curation. The package follows tidyverse design
+    principles and supports any organism with appropriate annotation databases.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends:
+    R (>= 4.3.0)
+Imports:
+    data.table (>= 1.14.0),
+    dplyr (>= 1.0.0),
+    openxlsx (>= 4.2.0)
+Suggests:
+    plotgardener,
+    GenomicRanges,
+    GenomeInfoDb,
+    BiocGenerics,
+    RColorBrewer,
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    devtools,
+    usethis
+RoxygenNote: 7.3.2
+VignetteBuilder: knitr
+URL: https://github.com/RauLabUNC/genePackRat
+BugReports: https://github.com/RauLabUNC/genePackRat/issues
