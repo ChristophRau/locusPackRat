@@ -1,10 +1,17 @@
 # genePackRat
 
-R package for gene prioritization from GWAS/QTL studies using relational filtering.
+R package for generating standardized gene packets from QTL/GWAS loci.
 
-## Problem
+## What It Does
 
-GWAS in model organisms often produces large loci (10-100+ Mb) containing dozens to hundreds of genes. Researchers need to integrate multiple data sources - expression, variants, phenotypes, orthologs - to identify likely causal genes. genePackRat provides tools for flexible data integration and filtering based on relational database principles.
+When you map QTLs in mice, you get broad loci (often 10-50 Mb) containing dozens of genes. genePackRat creates standardized "packets" for each locus - multi-sheet Excel files, locus zoom plots, and README summaries - to help your team systematically evaluate candidates.
+
+Each packet consolidates:
+- Gene annotations with expression levels
+- Human disease associations (Open Targets)
+- Mouse phenotypes (MGI)
+- QTL mapping visualizations
+- Collaborative Cross founder variants (optional)
 
 ## Installation
 
@@ -12,174 +19,124 @@ Requires R >= 4.3.0
 
 ```r
 # Install from GitHub
-install.packages("devtools")
 devtools::install_github("RauLabUNC/genePackRat")
-
-# Or using remotes
-install.packages("remotes")
-remotes::install_github("RauLabUNC/genePackRat")
 ```
 
-Dependencies (data.table, dplyr, openxlsx) will be installed automatically.
+Dependencies (data.table, dplyr, openxlsx, tidyr, plotgardener, RColorBrewer) install automatically.
 
-## Usage
+## Basic Usage
 
 ```r
 library(genePackRat)
 
-# Load your data
-genes <- read.csv("my_genes.csv")
-expression <- read.csv("expression_data.csv")
-gwas_hits <- read.csv("gwas_significant_genes.csv")
+# Load your QTL results
+sig_regions <- read.csv("data/qtl_significant_regions.csv")
+scan_data <- readRDS("data/qtl_scans.rds")
+thresholds <- readRDS("data/qtl_thresholds.rds")
 
-# Filter for GWAS hits only
-candidate_genes <- filterGenes(
-  inputTable = genes,
-  referenceTable = gwas_hits,
-  by = "gene_id",
-  joinType = "semi"  # keeps only matching genes
-)
-
-# Add expression data and filter
-expressed_candidates <- filterGenes(
-  inputTable = candidate_genes,
-  referenceTable = expression,
-  by = "gene_id",
-  joinType = "left",
-  filters = list(
-    makeFilter("TPM_heart", condition = ">", value = 100),
-    makeFilter("biotype", condition = "==", value = "protein_coding")
-  )
-)
-
-# Build gene table with multiple annotations
-gene_table <- build_gene_table(
-  genes_df = expressed_candidates,
-  expression_df = expression,
-  orthology_df = orthologs
-)
-
-# Export to Excel
-create_gene_workbook(
-  gene_data = gene_table,
-  output_file = "candidate_genes.xlsx"
+# Generate packet for first locus
+generateLocusPacket(
+  locus_cluster = sig_regions[1, ],
+  input_path = "data/",
+  output_path = "results/locus_packets/",
+  scan_data = scan_data,
+  threshold_data = thresholds
 )
 ```
 
-## Functions
+This creates:
+```
+results/locus_packets/locus_chr1_100-110Mb/
+├── gene_info_cluster_chr1_100-110Mb.xlsx    # 3-sheet workbook
+├── zoomPlots/
+│   └── locus_zoom_HR_Ctrl_chr1_105.2Mb.pdf
+├── README_summary.txt                        # Cardiac genes highlighted
+└── founder_snp_table_chr1_100-110Mb.csv     # Optional
+```
 
-### Filtering (filterGenes.R)
-- `filterGenes()` - Filter data using joins and custom criteria
-- `makeFilter()` - Create filter specifications
-- `applyFilter()` - Apply filter to data
+## Core Functions
 
-### Data Integration (join_tables.R)
-- `build_gene_table()` - Combine annotations from multiple sources
-- `aggregate_genes_by_locus()` - Group genes by genomic regions
-- `filter_genes()` - Legacy filtering function
+**`generateLocusPacket()`** - Creates complete packet directory
+- Excel workbook with gene annotations
+- Locus zoom plots for each QTL
+- README summary with cardiac associations
+- Founder SNP table (optional)
 
-### Excel Export (excel.R)
-- `create_gene_workbook()` - Create multi-sheet Excel files
+**`generateLocusZoomPlot()`** - Multi-panel visualization
+- LOD scores with significance threshold
+- Founder allele effects (8 strains)
+- Overlapping QTL regions
+- Gene track with highlighted candidates
 
-### Phenotypes (phenotype.R)
-- `extract_phenotypes()` - Extract phenotypes by keyword
-- `score_phenotype_relevance()` - Rank phenotypes
-- `summarize_phenotypes_by_gene()` - Aggregate by gene
+**`generateGeneInfoExcel()`** - 3-sheet workbook
+- Sheet 1: AllGenesInCluster (main summary)
+- Sheet 2: AllMousePhenotypes (MGI data)
+- Sheet 3: AllHumanDiseases (Open Targets)
 
-### Reporting (summary.R)
-- `generate_locus_report()` - Create summary reports
-- `identify_top_candidates()` - Prioritize genes
-- `generate_recommendations()` - Suggest follow-ups
+## Required Data Structure
 
-### Plotting (plotting.R)
-- `plot_locus()` - Create locus plots
-- `plot_locus_dashboard()` - Multi-panel plots
+The package expects CSV files in a standard structure:
 
+```
+data/
+└── processed/joinLoci/
+    ├── relational_tables/
+    │   ├── genes_mouse.csv              # Gene coordinates
+    │   ├── orthology.csv                # Mouse-human orthologs
+    │   ├── associations.csv             # Human disease associations
+    │   ├── mouseGenePhenotypes.csv      # MGI phenotypes
+    │   └── traitLoci.csv                # QTL definitions
+    ├── geneTables/
+    │   └── multTrait_cis-eQTL_nrvmExp.csv  # Merged gene summary
+    └── bulk_exp/
+        └── rna_expression.csv           # Bulk RNA-seq (VST)
+```
 
-## Join Types
+See documentation for required column schemas.
 
-- `semi` - Keep rows that match reference (like `%in%`)
-- `anti` - Keep rows that DON'T match reference (like `!%in%`)
-- `inner` - Merge matching rows from both tables
-- `left` - Keep all input rows, add reference columns
+## Customizing File Paths
 
-Column mapping for different names:
+All paths can be overridden:
+
 ```r
+generateLocusPacket(
+  locus_cluster = my_locus,
+  input_path = "data/",
+  rna_info_file = "data/rnaseq/VST_Info_2024-12-15.csv",  # Custom path
+  founder_mutations_file = NULL,  # Skip CC variants
+  heart_pattern = NULL  # Use default cardiac keywords
+)
+```
+
+## Additional Utilities
+
+**`filterGenes()`** - Simple relational filtering
+```r
+# Keep only genes present in QTL results
 filtered <- filterGenes(
-  inputTable = mouse_genes,
-  referenceTable = human_orthologs,
-  by = c("mouse_symbol" = "gene"),  # Map columns
-  joinType = "inner"
-)
-```
-
-
-
-## Example Workflow
-
-```r
-library(genePackRat)
-
-# Load data
-all_genes <- read.csv("all_genes.csv")
-gwas_results <- read.csv("gwas_significant.csv")
-rnaseq <- read.csv("heart_rnaseq.csv")
-eqtl_data <- read.csv("heart_eqtl.csv")
-
-# Step 1: Get GWAS hits
-gwas_genes <- filterGenes(
   inputTable = all_genes,
-  referenceTable = gwas_results,
+  referenceTable = qtl_genes,
   by = "gene_id",
   joinType = "semi"
 )
 
-# Step 2: Add expression and filter
-expressed_hits <- filterGenes(
-  inputTable = gwas_genes,
-  referenceTable = rnaseq,
-  by = "gene_id",
-  joinType = "left",
+# Add filters
+filtered <- filterGenes(
+  inputTable = filtered,
   filters = list(
-    makeFilter("TPM", condition = ">", value = 10),
-    makeFilter("padj", condition = "<", value = 0.05)
+    makeFilter("biotype", "==", "protein_coding"),
+    makeFilter("expression", ">", 50)
   )
 )
-
-# Step 3: Add eQTL data
-with_eqtl <- filterGenes(
-  inputTable = expressed_hits,
-  referenceTable = eqtl_data,
-  by = c("gene_id" = "gene"),
-  joinType = "left",
-  filters = list(
-    makeFilter("eqtl_pvalue", condition = "<", value = 1e-5)
-  )
-)
-
-# Export results
-create_gene_workbook(with_eqtl, "candidates.xlsx")
-```
-
-
-## Testing
-
-```r
-# Run tests
-cd tests
-Rscript run_tests.R
-
-# Or generate HTML report
-R -e "rmarkdown::render('test_package_functionality.Rmd')"
 ```
 
 ## Citation
 
-Gural B, Kimball T, Luu A, Rau CD. genePackRat: A framework for prioritizing candidate genes from GWAS intervals. *In preparation* (2025).
+Gural B, Kimball T, Luu A, Rau CD. genePackRat: Standardized gene packets for QTL follow-up. *In preparation* (2025).
 
 ## License
 
-MIT License
+MIT
 
 ## Contact
 

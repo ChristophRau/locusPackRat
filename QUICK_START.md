@@ -1,121 +1,119 @@
-# PackRat Quick Start Guide
+# Quick Start Guide
 
-## Setup Development Environment
-
-### Option 1: Conda Environment (Recommended)
-```bash
-# Create and activate conda environment
-./setup_environment.sh
-conda activate packrat-dev
-
-# Test installation
-Rscript tests/test_installation.R
-```
-
-### Option 2: System R with Modules
-```bash
-# Load R module
-module load r/4.4.0
-
-# Install in R
-R
-> install.packages(c("data.table", "dplyr", "openxlsx", "testthat"))
-> devtools::install(".")
-```
-
-## Testing Your Changes
-
-### Quick Tests (Login Node Safe)
-```bash
-make test-quick  # Run unit tests
-```
-
-### Full Tests (Requires Compute Node)
-```bash
-make test-integration  # Submit to SLURM
-make status           # Check job status
-make view-results     # View results
-```
-
-## Basic Usage
+## Installation
 
 ```r
-library(PackRat)
+devtools::install_github("RauLabUNC/genePackRat")
+```
 
-# Load your data
-genes <- read.csv("genes.csv")
-gwasHits <- read.csv("gwas_hits.csv")
+## Minimal Example
 
-# Filter genes to keep only GWAS hits
-candidates <- filterGenes(
-  inputTable = genes,
-  referenceTable = gwasHits,
+```r
+library(genePackRat)
+
+# Load QTL results
+loci <- read.csv("significant_qtls.csv")
+scans <- readRDS("qtl_scans.rds")
+thresholds <- readRDS("qtl_thresholds.rds")
+
+# Generate packet for first locus
+generateLocusPacket(
+  locus_cluster = loci[1, ],
+  input_path = "data/",
+  scan_data = scans,
+  threshold_data = thresholds
+)
+```
+
+## What You Need
+
+### Required Data Files
+
+Place your data in this structure:
+
+```
+data/
+└── processed/joinLoci/
+    ├── relational_tables/
+    │   ├── genes_mouse.csv
+    │   ├── orthology.csv
+    │   ├── associations.csv
+    │   ├── mouseGenePhenotypes.csv
+    │   └── traitLoci.csv
+    ├── geneTables/
+    │   └── multTrait_cis-eQTL_nrvmExp.csv
+    └── bulk_exp/
+        └── rna_expression.csv
+```
+
+See README for required columns in each file.
+
+### Optional: CC Founder Variants
+
+```
+data/processed/joinLoci/relational_tables/ccVariants/
+├── gene_mutations.csv
+└── snp_mutations.csv
+```
+
+## Output Structure
+
+Each packet creates:
+
+```
+results/locus_packets/locus_chr1_100-110Mb/
+├── gene_info_cluster_chr1_100-110Mb.xlsx
+├── zoomPlots/
+│   └── locus_zoom_*.pdf
+├── README_summary.txt
+└── founder_snp_table_*.csv
+```
+
+## Custom Paths
+
+Override any file path:
+
+```r
+generateLocusPacket(
+  locus_cluster = my_locus,
+  input_path = "data/",
+  rna_info_file = "custom/path/expression.csv",
+  founder_mutations_file = NULL  # Skip variants
+)
+```
+
+## Filtering Utility
+
+Use `filterGenes()` for quick data filtering:
+
+```r
+# Keep only GWAS hits
+hits <- filterGenes(
+  inputTable = all_genes,
+  referenceTable = gwas_results,
   by = "gene_id",
   joinType = "semi"
 )
 
-# Add filters
-filtered <- filterGenes(
-  inputTable = candidates,
+# Add expression filter
+expressed <- filterGenes(
+  inputTable = hits,
   filters = list(
     makeFilter("biotype", "==", "protein_coding"),
-    makeFilter("expression", ">", 100)
+    makeFilter("TPM", ">", 100)
   )
 )
-
-# Create Excel report
-createGeneWorkbook(filtered, "results.xlsx")
 ```
 
-## Development Workflow
+## Getting Help
 
-1. **Make changes** to R files
-2. **Test quickly**: `make test-quick`
-3. **Test thoroughly**: `make test-integration`
-4. **Build package**: `make build`
-5. **Check package**: `make check`
-
-## Package Structure
-
-- `R/` - Source code (use camelCase naming)
-- `tests/` - Test scripts and data
-- `inst/testdata/` - Small example datasets
-- `environment.yml` - Conda specification
-- `Makefile` - Development commands
-
-## Key Functions
-
-- `filterGenes()` - Relational filtering with flexible joins
-- `makeFilter()` - Create filter specifications
-- `buildGeneTable()` - Combine annotations
-- `createGeneWorkbook()` - Export to Excel
-- `plotLocus()` - Create visualizations
-
-## Help & Documentation
-
-- Run `?filterGenes` in R for function help
-- See `examples/` for usage examples
-- Check `.claude_notes/` for development details
-
-## Common Issues
-
-### Dependency Conflicts
-If you get library errors, ensure you're using EITHER conda OR modules, not both:
-```bash
-conda deactivate  # If using modules
-# OR
-module unload r   # If using conda
-```
-
-### Missing Packages
-Install missing packages:
 ```r
-install.packages(c("package1", "package2"))
+?generateLocusPacket
+?generateLocusZoomPlot
+?generateGeneInfoExcel
+?filterGenes
 ```
 
-### SLURM Jobs Not Running
-Check queue and errors:
-```bash
-squeue -u $USER
-cat tests/slurm/test_results/*.err
-```
+## Development
+
+See `.claude_notes/` for detailed development notes and design decisions.

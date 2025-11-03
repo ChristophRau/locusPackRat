@@ -1,18 +1,17 @@
 Package: genePackRat
 Type: Package
-Title: Gene Packet-based Rating for Prioritizing Candidate Genes from GWAS Loci
+Title: Standardized Gene Packets for QTL Follow-up Studies
 Version: 0.1.0
 Authors@R: c(
     person("Brian", "Gural", email = "bgural@unc.edu", role = c("aut", "cre")),
     person("Todd", "Kimball", role = "aut"),
     person("Anh", "Luu", role = "aut"),
     person("Christoph D.", "Rau", role = "aut"))
-Description: genePackRat (Gene Packet-based Rating) provides a modular framework for
-    prioritizing candidate genes from broad GWAS/QTL intervals. It creates
-    standardized "gene packets" that consolidate gene annotations, public
-    database information, and study-specific data into multi-sheet Excel
-    workbooks for team-based curation. The package follows tidyverse design
-    principles and supports any organism with appropriate annotation databases.
+Description: Creates standardized "gene packets" for QTL/GWAS loci containing
+    multi-sheet Excel workbooks, locus zoom visualizations, and summary reports.
+    Each packet consolidates gene annotations, human disease associations (Open Targets),
+    mouse phenotypes (MGI), expression data, and optional founder variants. Designed
+    for systematic evaluation of candidate genes in broad genomic intervals.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -21,18 +20,21 @@ Depends:
 Imports:
     data.table (>= 1.14.0),
     dplyr (>= 1.0.0),
-    openxlsx (>= 4.2.0)
-Suggests:
+    openxlsx (>= 4.2.0),
+    tidyr,
     plotgardener,
+    RColorBrewer
+Suggests:
     GenomicRanges,
     GenomeInfoDb,
     BiocGenerics,
-    RColorBrewer,
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
     devtools,
-    usethis
+    usethis,
+    TxDb.Mmusculus.UCSC.mm39.knownGene,
+    org.Mm.eg.db
 RoxygenNote: 7.3.2
 VignetteBuilder: knitr
 URL: https://github.com/RauLabUNC/genePackRat
