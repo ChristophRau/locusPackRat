@@ -1,17 +1,20 @@
-Package: genePackRat
+Package: locusPackRat
 Type: Package
-Title: Standardized Gene Packets for QTL Follow-up Studies
-Version: 0.1.0
+Title: Flexible R Package for Managing Genomic Analysis Projects
+Version: 0.2.0
 Authors@R: c(
     person("Brian", "Gural", email = "bgural@unc.edu", role = c("aut", "cre")),
     person("Todd", "Kimball", role = "aut"),
     person("Anh", "Luu", role = "aut"),
     person("Christoph D.", "Rau", role = "aut"))
-Description: Creates standardized "gene packets" for QTL/GWAS loci containing
-    multi-sheet Excel workbooks, locus zoom visualizations, and summary reports.
-    Each packet consolidates gene annotations, human disease associations (Open Targets),
-    mouse phenotypes (MGI), expression data, and optional founder variants. Designed
-    for systematic evaluation of candidate genes in broad genomic intervals.
+Description: Provides a project-based workflow for genomic analyses with persistent data storage
+    and integrated visualization. Instead of passing data between functions, users create
+    persistent projects that store genes or genomic regions along with any supplementary data.
+    Features include persistent storage for loading data once and using many times, flexible
+    integration of any type of supplementary data, reproducible output generation with different
+    parameters, and multi-species support for human and mouse genomes (hg38, hg19, mm39, mm10).
+    Ideal for QTL/GWAS follow-up studies, gene set analyses, and systematic evaluation of
+    candidate genes in genomic intervals.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -19,8 +22,9 @@ Depends:
     R (>= 4.3.0)
 Imports:
     data.table (>= 1.14.0),
-    dplyr (>= 1.0.0),
+    jsonlite (>= 1.8.0),
     openxlsx (>= 4.2.0),
+    dplyr (>= 1.0.0),
     tidyr,
     plotgardener,
     RColorBrewer
@@ -38,6 +42,6 @@ Suggests:
     org.Mm.eg.db
 RoxygenNote: 7.3.2
 VignetteBuilder: knitr
-URL: https://github.com/RauLabUNC/genePackRat
-BugReports: https://github.com/RauLabUNC/genePackRat/issues
+URL: https://github.com/RauLabUNC/locusPackRat
+BugReports: https://github.com/RauLabUNC/locusPackRat/issues
 biocViews: Visualization, QualityControl, GeneExpression

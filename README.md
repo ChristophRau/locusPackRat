@@ -1,152 +1,235 @@
-# genePackRat
+# locusPackRat
 
-R package for generating standardized gene packets from QTL/GWAS loci.
+A flexible R package for managing genomic analysis projects with persistent data storage and integrated visualization.
 
-## What It Does
+## Overview
 
-When you map QTLs in mice, you get broad loci (often 10-50 Mb) containing dozens of genes. genePackRat creates standardized "packets" for each locus - multi-sheet Excel files, locus zoom plots, and README summaries - to help your team systematically evaluate candidates.
+locusPackRat provides a project-based workflow for genomic analyses. Instead of passing data between functions, you create a persistent project that stores your genes or genomic regions along with any supplementary data. This allows for:
 
-Each packet consolidates:
-- Gene annotations with expression levels
-- Human disease associations (Open Targets)
-- Mouse phenotypes (MGI)
-- QTL mapping visualizations
-- Collaborative Cross founder variants (optional)
+- **Persistent storage**: Load data once, use many times
+- **Flexible integration**: Add any type of supplementary data
+- **Reproducible outputs**: Regenerate visualizations and reports with different parameters
+- **Multi-species support**: Works with human and mouse genomes (hg38, hg19, mm39, mm10)
 
 ## Installation
 
-Requires R >= 4.3.0
-
 ```r
-# Install BiocManager if needed (for plotgardener dependency)
-if (!require("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
+# Install from GitHub
+devtools::install_github("RauLabUNC/locusPackRat")
 
-# Install from GitHub with all dependencies
-BiocManager::install("RauLabUNC/genePackRat")
-
-# Or using devtools
-devtools::install_github("RauLabUNC/genePackRat")
+# For visualization features, you'll also need plotgardener from Bioconductor:
+BiocManager::install("plotgardener")
 ```
 
-Core dependencies install automatically: data.table, dplyr, openxlsx, tidyr, plotgardener (from Bioconductor), and RColorBrewer.
+### Dependencies
+- R >= 4.3.0
+- data.table
+- jsonlite
+- openxlsx (for Excel output)
+- plotgardener (optional, for LocusZoom plots)
 
-## Basic Usage
+## Quick Start
+
+### 1. Initialize a Project
 
 ```r
-library(genePackRat)
+library(locusPackRat)
 
-# Load your QTL results
-sig_regions <- read.csv("data/qtl_significant_regions.csv")
-scan_data <- readRDS("data/qtl_scans.rds")
-thresholds <- readRDS("data/qtl_thresholds.rds")
+# With gene list
+genes <- data.frame(
+  gene_symbol = c("BRCA1", "TP53", "EGFR", "MYC"),
+  expression = c(100, 250, 50, 300)
+)
 
-# Generate packet for first locus
-generateLocusPacket(
-  locus_cluster = sig_regions[1, ],
-  input_path = "data/",
-  output_path = "results/locus_packets/",
-  scan_data = scan_data,
-  threshold_data = thresholds
+initPackRat(
+  data = genes,
+  mode = "gene",
+  species = "human",
+  genome = "hg38",
+  project_dir = "my_project"
+)
+
+# Or with genomic regions (e.g., QTL results)
+regions <- data.frame(
+  chr = c(5, 10, 12),
+  start = c(10000000, 50000000, 75000000),
+  end = c(15000000, 55000000, 80000000),
+  trait = c("height", "weight", "BMI")
+)
+
+initPackRat(
+  data = regions,
+  mode = "region",
+  species = "mouse",
+  genome = "mm39",
+  project_dir = "qtl_project"
 )
 ```
 
-This creates:
-```
-results/locus_packets/locus_chr1_100-110Mb/
-├── gene_info_cluster_chr1_100-110Mb.xlsx    # 3-sheet workbook
-├── zoomPlots/
-│   └── locus_zoom_HR_Ctrl_chr1_105.2Mb.pdf
-├── README_summary.txt                        # Cardiac genes highlighted
-└── founder_snp_table_chr1_100-110Mb.csv     # Optional
-```
-
-## Core Functions
-
-**`generateLocusPacket()`** - Creates complete packet directory
-- Excel workbook with gene annotations
-- Locus zoom plots for each QTL
-- README summary with cardiac associations
-- Founder SNP table (optional)
-
-**`generateLocusZoomPlot()`** - Creates multi-panel QTL visualization
-- Manhattan plot with LOD scores and significance thresholds
-- Founder allele effects for 8 CC strains with preset colors
-- Overlapping QTL display for up to 8 loci
-- Gene annotations (works without TxDb/org.Mm packages)
-
-**`generateGeneInfoExcel()`** - 3-sheet workbook
-- Sheet 1: AllGenesInCluster (main summary)
-- Sheet 2: AllMousePhenotypes (MGI data)
-- Sheet 3: AllHumanDiseases (Open Targets)
-
-## Required Data Structure
-
-Test data is included in `tests/testthat/fixtures/` for development.
-
-Production data expects CSV files in this structure:
-
-```
-data/
-└── processed/joinLoci/
-    ├── relational_tables/
-    │   ├── genes_mouse.csv              # Gene coordinates
-    │   ├── orthology.csv                # Mouse-human orthologs
-    │   ├── associations.csv             # Human disease associations
-    │   ├── mouseGenePhenotypes.csv      # MGI phenotypes
-    │   └── traitLoci.csv                # QTL definitions
-    ├── geneTables/
-    │   └── multTrait_cis-eQTL_nrvmExp.csv  # Merged gene summary
-    └── bulk_exp/
-        └── rna_expression.csv           # Bulk RNA-seq (VST)
-```
-
-See documentation for required column schemas.
-
-## Customizing File Paths
-
-All paths can be overridden:
+### 2. Add Supplementary Data
 
 ```r
-generateLocusPacket(
-  locus_cluster = my_locus,
-  input_path = "data/",
-  rna_info_file = "data/rnaseq/VST_Info_2024-12-15.csv",  # Custom path
-  founder_mutations_file = NULL,  # Skip CC variants
-  heart_pattern = NULL  # Use default cardiac keywords
+# Add expression data
+expression_data <- read.csv("expression.csv")
+addRatTable(
+  data = expression_data,
+  table_name = "expression",
+  link_type = "gene",
+  link_by = "gene_symbol",  # Auto-detected if NULL
+  project_dir = "my_project"
+)
+
+# Add QTL scan results
+scan_results <- read.csv("qtl_scans.csv")
+addRatTable(
+  data = scan_results,
+  table_name = "qtl_scans",
+  link_type = "region",
+  project_dir = "qtl_project"
+)
+
+# View available tables
+listPackRatTables("my_project")
+```
+
+### 3. Generate Outputs
+
+```r
+# Create Excel report with all data
+generateGeneSheet(
+  format = "excel",
+  include_supplementary = TRUE,  # Include all tables
+  output_file = "results/gene_report.xlsx",
+  project_dir = "my_project"
+)
+
+# Create filtered CSV
+generateGeneSheet(
+  format = "csv",
+  filter_expr = "expression > 100",
+  include_supplementary = c("expression", "phenotypes"),  # Specific tables
+  output_file = "results/high_expression.csv",
+  project_dir = "my_project"
+)
+
+# Generate LocusZoom plot (requires plotgardener)
+generateLocusZoomPlot_v2(
+  region_id = "region_1",
+  scan_table = "qtl_scans",
+  project_dir = "qtl_project"
 )
 ```
 
-## Additional Utilities
+## Key Functions
 
-**`filterGenes()`** - Simple relational filtering
+### Project Management
+- `initPackRat()` - Initialize a new project with genes or regions
+- `addRatTable()` - Add supplementary data tables
+- `listPackRatTables()` - List available supplementary tables
+
+### Output Generation
+- `generateGeneSheet()` - Create formatted Excel or CSV outputs
+- `generateLocusZoomPlot_v2()` - Create LocusZoom-style visualization
+
+## Project Structure
+
+Projects are stored in a `.locusPackRat` directory:
+
+```
+my_project/
+└── .locusPackRat/
+    ├── input/
+    │   ├── genes.csv         # Core gene/region data
+    │   └── orthology.csv      # Cross-species orthologs
+    ├── supplementary/
+    │   ├── expression.csv     # Added via addRatTable()
+    │   ├── phenotypes.csv
+    │   └── qtl_scans.csv
+    ├── output/
+    │   ├── gene_sheet.xlsx
+    │   └── plots/
+    └── config.json            # Project metadata
+```
+
+## Advanced Features
+
+### Excel with Multiple Tabs
+
 ```r
-# Keep only genes present in QTL results
-filtered <- filterGenes(
-  inputTable = all_genes,
-  referenceTable = qtl_genes,
-  by = "gene_id",
-  joinType = "semi"
+generateGeneSheet(
+  format = "excel",
+  split_by = "criteria",
+  split_criteria = list(
+    "High_Expression" = "expression > 100",
+    "Disease_Associated" = "!is.na(disease)",
+    "Significant" = "p_value < 0.05"
+  ),
+  highlight_genes = c("BRCA1", "TP53"),
+  project_dir = "my_project"
 )
+```
 
-# Add filters
-filtered <- filterGenes(
-  inputTable = filtered,
-  filters = list(
-    makeFilter("biotype", "==", "protein_coding"),
-    makeFilter("expression", ">", 50)
+### Batch Processing
+
+```r
+# Generate plots for all regions
+regions <- fread("qtl_project/.locusPackRat/input/regions.csv")
+for (region in regions$region_id) {
+  generateLocusZoomPlot_v2(
+    region_id = region,
+    project_dir = "qtl_project"
   )
+}
+```
+
+## Working with QTL Data
+
+```r
+# Initialize with QTL regions
+qtl_results <- data.frame(
+  chr = c(5, 10),
+  start = c(10000000, 50000000),
+  end = c(15000000, 55000000),
+  peak_pos = c(12500000, 52500000),
+  lod = c(8.5, 6.2),
+  trait = c("heart_rate", "blood_pressure")
+)
+
+initPackRat(qtl_results, mode = "region",
+           species = "mouse", genome = "mm39",
+           project_dir = "heart_qtl")
+
+# Add scan data
+addRatTable(scan_data, "scans", "region", project_dir = "heart_qtl")
+
+# Add gene priorities
+addRatTable(gene_scores, "priorities", "gene", project_dir = "heart_qtl")
+
+# Generate comprehensive report
+generateGeneSheet(
+  format = "excel",
+  include_supplementary = TRUE,
+  project_dir = "heart_qtl"
 )
 ```
+
+## Migration from Legacy Functions
+
+If you're using the old packet_core workflow, temporary wrappers are available:
+- `generateLocusZoomPlot_legacy()` - Wraps old generateLocusZoomPlot
+- `generateGeneInfoExcel_legacy()` - Wraps old generateGeneInfoExcel
+
+See the [package documentation](https://github.com/RauLabUNC/locusPackRat) for detailed migration examples.
 
 ## Citation
 
-Gural B, Kimball T, Luu A, Rau CD. genePackRat: Standardized gene packets for QTL follow-up. *In preparation* (2025).
+Gural B, Kimball T, Luu A, Rau CD. locusPackRat: A Flexible Framework for Prioritizing Candidate Genes from GWAS and other Gene-Level Studies. *In preparation* (2025).
+
+## Support
+
+- Issues: https://github.com/RauLabUNC/locusPackRat/issues
+- Contact: bgural@unc.edu
 
 ## License
 
 MIT
-
-## Contact
-
-bgural@unc.edu
